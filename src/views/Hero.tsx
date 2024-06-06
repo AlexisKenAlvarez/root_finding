@@ -133,12 +133,12 @@ const Hero = () => {
         .replace(/(\d)\(/g, "$1*(")
         .replace(/\)(\d)/g, ")*$1")
     );
-    const fxl = parseFloat(Number(xl).toFixed(4));
-    const fxm = parseFloat(Number(xm).toFixed(4));
-    const fxr = parseFloat(Number(xr).toFixed(4));
-    const fyl = parseFloat(Number(yl).toFixed(4));
-    const fym = parseFloat(Number(ym).toFixed(4));
-    const fyr = parseFloat(Number(yr).toFixed(4));
+    const fxl = parseFloat(Number(xl).toFixed(roundoff));
+    const fxm = parseFloat(Number(xm).toFixed(roundoff));
+    const fxr = parseFloat(Number(xr).toFixed(roundoff));
+    const fyl = parseFloat(Number(yl).toFixed(roundoff));
+    const fym = parseFloat(Number(ym).toFixed(roundoff));
+    const fyr = parseFloat(Number(yr).toFixed(roundoff));
 
     const isRight = areOppositeSigns(fym, fyr);
 
@@ -172,8 +172,8 @@ const Hero = () => {
         .replace(/\)(\d)/g, ")*$1")
     );
 
-    const parsed_ym = parseFloat(Number(new_ym).toFixed(4));
-    const parsed_xm = parseFloat(Number(new_xm).toFixed(4));
+    const parsed_ym = parseFloat(Number(new_ym).toFixed(roundoff));
+    const parsed_xm = parseFloat(Number(new_xm).toFixed(roundoff));
 
     Iterate({
       xl: isRight ? parsed_xm : fxl,
