@@ -28,6 +28,12 @@ import React from "react";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 
+import Lottie from "lottie-react";
+import fast from "@/assets/fast.json";
+import accurate from "@/assets/accurate.json";
+import reliable from "@/assets/reliable.json";
+import { bisectionXm, falsiXm } from "@/functions/root-finding";
+
 interface IterationType {
   xl: number;
   xm: number;
@@ -46,6 +52,7 @@ const Hero = () => {
   const [computation, setComputation] = useState<IterationType[]>([]);
   const [clicked, setClicked] = useState(false);
   const [type, setType] = useState<Types["rootFinding"]>("bisection");
+  console.log("🚀 ~ Hero ~ type:", type)
   const [roundoff, setRoundOff] = useState(4);
 
   const formSchema = z
@@ -83,12 +90,16 @@ const Hero = () => {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+    console.log(values.equation);
+    setComputation([]);
+
     const xl_equation = values.equation
       .toLowerCase()
       .replace(/\^/g, "**")
       .replace(/x/g, `(${values.xl})`)
       .replace(/(\d)\(/g, "$1*(")
       .replace(/\)(\d)/g, ")*$1");
+    console.log("🚀 ~ onSubmit ~ xl_equation:", xl_equation)
 
     const xr_equation = values.equation
       .toLowerCase()
@@ -101,9 +112,18 @@ const Hero = () => {
     const xr = values.xr;
 
     const yl = eval(xl_equation);
+
     const yr = eval(xr_equation);
 
-    const xm = (xl + xr) / 2;
+    const xm =
+      type === "bisection"
+        ? bisectionXm(xl, xr)
+        : falsiXm({
+            xl: xl,
+            xr: xr,
+            yl: yl,
+            yr: yr,
+          });
 
     const ym = eval(
       values.equation
@@ -120,7 +140,7 @@ const Hero = () => {
     const fym = parseFloat(Number(ym).toFixed(4));
     const fyr = parseFloat(Number(yr).toFixed(4));
 
-    const isRight = (yl ^ ym) > 0;
+    const isRight = areOppositeSigns(fym, fyr);
 
     setComputation((prev) => [
       {
@@ -133,7 +153,15 @@ const Hero = () => {
       },
     ]);
 
-    const new_xm = (fxl + fxr) / 2;
+    const new_xm =
+      type === "bisection"
+        ? bisectionXm(fxl, fxr)
+        : falsiXm({
+            xl: fxl,
+            xr: fxr,
+            yl: fyl,
+            yr: fyr,
+          });
 
     const new_ym = eval(
       values.equation
@@ -171,7 +199,15 @@ const Hero = () => {
       const fym = parseFloat(Number(ym).toFixed(roundoff));
       const fyr = parseFloat(Number(yr).toFixed(roundoff));
 
-      const new_xm = (fxl + fxr) / 2;
+      const new_xm =
+        type === "bisection"
+          ? bisectionXm(fxl, fxr)
+          : falsiXm({
+              xl: fxl,
+              xr: fxr,
+              yl: fyl,
+              yr: fyr,
+            });
 
       const new_ym = eval(
         equation!
@@ -186,7 +222,6 @@ const Hero = () => {
       const parsed_xm = parseFloat(Number(new_xm).toFixed(roundoff));
 
       const isRight = areOppositeSigns(parsed_ym, fyr);
-      console.log("🚀 ~ Iterate ~ isRight:", parsed_ym, fyr, isRight);
 
       setComputation((prev) => [
         ...prev,
@@ -221,7 +256,7 @@ const Hero = () => {
 
   return (
     <div className="">
-      <div className="w-full bg-primary/90 text-white pt-6">
+      <div className="w-full bg-primary/90 text-white pt-4">
         <div className="max-w-screen-md mx-auto sm:p-10 p-6 ">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 ">
@@ -236,11 +271,11 @@ const Hero = () => {
                           placeholder="Enter equation"
                           onFocus={() => setClicked(true)}
                           autoComplete="off"
-                          className="py-8 text-xl text-black rounded-tr-none rounded-br-none drop-shadow-md"
+                          className="sm:py-8 py-6 text-lg sm:text-xl text-black rounded-tr-none rounded-br-none drop-shadow-md"
                           {...field}
                         />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-orange-100" />
                     </FormItem>
                   )}
                 />
@@ -263,7 +298,7 @@ const Hero = () => {
                     name="xl"
                     render={({ field }) => (
                       <FormItem className="w-full">
-                        <FormLabel>
+                        <FormLabel className="!text-white">
                           Initial Value for X
                           <span
                             style={{ verticalAlign: "sub" }}
@@ -280,7 +315,7 @@ const Hero = () => {
                             {...field}
                           />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-orange-100" />
                       </FormItem>
                     )}
                   />
@@ -337,11 +372,7 @@ const Hero = () => {
 
                   <div className="w-full space-y-2">
                     <Label className="">Round off</Label>
-                    <Select
-                      onValueChange={(val) =>
-                        setRoundOff(parseInt(val))
-                      }
-                    >
+                    <Select onValueChange={(val) => setRoundOff(parseInt(val))}>
                       <SelectTrigger className="w-full text-black">
                         <SelectValue className="text-black" placeholder="4" />
                       </SelectTrigger>
@@ -355,32 +386,31 @@ const Hero = () => {
                     </Select>
                   </div>
 
-
                   <div className="w-full space-y-2">
                     <Label className="">Root finding type</Label>
-                    
-                  <Select
-                    onValueChange={(val) =>
-                      setType(val as Types["rootFinding"])
-                    }
-                  >
-                    <SelectTrigger className="w-full text-black">
-                      <SelectValue
-                        className="text-black"
-                        placeholder="Bisection"
-                      />
-                    </SelectTrigger>
-                    <SelectContent defaultValue={"bisection"}>
-                      <SelectItem value="bisection">Bisection</SelectItem>
-                      <SelectItem value="falsi">Falsi</SelectItem>
-                      <SelectItem value="newton" disabled>
-                        Newton Raphson
-                      </SelectItem>
-                      <SelectItem value="secant" disabled>
-                        Secant
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+
+                    <Select
+                      onValueChange={(val) =>
+                        setType(val as Types["rootFinding"])
+                      }
+                    >
+                      <SelectTrigger className="w-full text-black">
+                        <SelectValue
+                          className="text-black"
+                          placeholder="Bisection"
+                        />
+                      </SelectTrigger>
+                      <SelectContent defaultValue={"bisection"}>
+                        <SelectItem value="bisection">Bisection</SelectItem>
+                        <SelectItem value="falsi">Falsi</SelectItem>
+                        <SelectItem value="newton" disabled>
+                          Newton Raphson
+                        </SelectItem>
+                        <SelectItem value="secant" disabled>
+                          Secant
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>
@@ -395,7 +425,7 @@ const Hero = () => {
         })}
       >
         <div className="mt-5">
-          <h1 className="">Computation</h1>
+          <h1 className="text-lg font-medium text-center">Computation</h1>
           <div className="mt-4">
             <ul className="w-full flex justify-between">
               {COLUMNS.map((item) => (
@@ -411,7 +441,7 @@ const Hero = () => {
               {computation.map((items, index) => (
                 <div
                   key={index}
-                  className="flex justify-between text-black/70 text-sm"
+                  className="flex justify-between text-black/70 text-xs sm:text-sm"
                 >
                   <li className="w-full text-center py-3">{index + 1}</li>
                   {Object.keys(items).map((key, i) => (
@@ -425,9 +455,57 @@ const Hero = () => {
           </div>
         </div>
       </div>
+
+      <div className="max-w-screen-lg mx-auto sm:p-10 p-6">
+        <h1 className="md:text-2xl text-xl font-bold text-center">
+          RootFinder, Making root finding easier.
+        </h1>
+
+        <div className="flex justify-center sm:flex-row flex-col gap-5 sm:gap-10 lg:gap-20 mt-10">
+          {FEATUERS.map((item) => (
+            <div key={item.title}>
+              <div
+                className="w-full max-w-44 sm:max-w-full h-fit rounded-lg mx-auto"
+                style={{ backgroundColor: item.bg }}
+              >
+                <Lottie animationData={item.icon} loop={true} />
+              </div>
+              <div className="text-center mt-6">
+                <h1 className="text-lg font-medium">{item.title}</h1>
+
+                <p className="mt-2 text-sm opacity-70 max-w-sm mx-auto">
+                  {item.desc}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
+
+const FEATUERS = [
+  {
+    title: "Fast",
+    desc: "Ensuring that calculations are performed quickly to save you valuable time.",
+    icon: fast,
+    bg: "#22c55e",
+  },
+
+  {
+    title: "Accurate",
+    desc: "Achieve high accuracy, providing precise solutions to your equations.",
+    icon: accurate,
+    bg: "#22d3ee",
+  },
+  {
+    title: "Reliable",
+    desc: "Utilize the root finding methods for their robust and reliable approach.",
+    icon: reliable,
+    bg: "#3b82f6",
+  },
+];
 
 const COLUMNS = ["i", "XL", "Xm", "XR", "YL", "Ym", "YR"];
 

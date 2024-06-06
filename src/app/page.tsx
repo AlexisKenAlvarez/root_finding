@@ -1,6 +1,7 @@
-import Hero from "@/views/Hero";
+import dynamic from "next/dynamic";
+const Hero = dynamic(() => import("@/views/Hero"), {ssr: false});
 
-const page = () => {
+const Page = () => {
   return (
     <div>
       <Hero />
@@ -8,4 +9,4 @@ const page = () => {
   );
 };
 
-export default page;
+export default Page;
