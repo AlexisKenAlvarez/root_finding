@@ -11,12 +11,22 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 
 import { useState } from "react";
 import React from "react";
+import { cn } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
 
 interface IterationType {
   xl: number;
@@ -28,9 +38,15 @@ interface IterationType {
   equation?: string;
 }
 
+interface Types {
+  rootFinding: "bisection" | "falsi" | "newton" | "secant";
+}
+
 const Hero = () => {
   const [computation, setComputation] = useState<IterationType[]>([]);
-  const iter = computation.length > 0;
+  const [clicked, setClicked] = useState(false);
+  const [type, setType] = useState<Types["rootFinding"]>("bisection");
+  const [roundoff, setRoundOff] = useState(4);
 
   const formSchema = z
     .object({
@@ -40,6 +56,7 @@ const Hero = () => {
         .max(50, { message: "Invalid equation" }),
       xl: z.coerce.number(),
       xr: z.coerce.number(),
+      precision: z.coerce.number(),
     })
     .superRefine((data, ctx) => {
       if (data.xl >= data.xr) {
@@ -61,6 +78,7 @@ const Hero = () => {
       equation: "",
       xl: 0,
       xr: 0,
+      precision: 0.1,
     },
   });
 
@@ -146,12 +164,12 @@ const Hero = () => {
     }, 400);
 
     const iterate_func = () => {
-      const fxl = parseFloat(Number(xl).toFixed(4));
-      const fxm = parseFloat(Number(xm).toFixed(4));
-      const fxr = parseFloat(Number(xr).toFixed(4));
-      const fyl = parseFloat(Number(yl).toFixed(4));
-      const fym = parseFloat(Number(ym).toFixed(4));
-      const fyr = parseFloat(Number(yr).toFixed(4));
+      const fxl = parseFloat(Number(xl).toFixed(roundoff));
+      const fxm = parseFloat(Number(xm).toFixed(roundoff));
+      const fxr = parseFloat(Number(xr).toFixed(roundoff));
+      const fyl = parseFloat(Number(yl).toFixed(roundoff));
+      const fym = parseFloat(Number(ym).toFixed(roundoff));
+      const fyr = parseFloat(Number(yr).toFixed(roundoff));
 
       const new_xm = (fxl + fxr) / 2;
 
@@ -164,8 +182,8 @@ const Hero = () => {
           .replace(/\)(\d)/g, ")*$1")
       );
 
-      const parsed_ym = parseFloat(Number(new_ym).toFixed(4));
-      const parsed_xm = parseFloat(Number(new_xm).toFixed(4));
+      const parsed_ym = parseFloat(Number(new_ym).toFixed(roundoff));
+      const parsed_xm = parseFloat(Number(new_xm).toFixed(roundoff));
 
       const isRight = areOppositeSigns(parsed_ym, fyr);
       console.log("🚀 ~ Iterate ~ isRight:", parsed_ym, fyr, isRight);
@@ -182,7 +200,10 @@ const Hero = () => {
         },
       ]);
 
-      if (parsed_ym === 0 || Math.abs(parsed_ym - fym) < 0.1) {
+      if (
+        parsed_ym === 0 ||
+        Math.abs(parsed_ym - fym) < form.getValues("precision")
+      ) {
         return;
       }
 
@@ -199,94 +220,209 @@ const Hero = () => {
   };
 
   return (
-    <div>
-      <h1 className="">Bisection method</h1>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 ">
-          <FormField
-            control={form.control}
-            name="equation"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Equation</FormLabel>
-                <FormControl>
-                  <Input placeholder="x^2 - 4x + 4" {...field} />
-                </FormControl>
-                <FormDescription>Enter Equation</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <div className="flex w-full gap-3">
-            <FormField
-              control={form.control}
-              name="xl"
-              render={({ field }) => (
-                <FormItem className="w-full">
-                  <FormLabel>
-                    Initial Value for X
-                    <span style={{ verticalAlign: "sub" }} className="text-xs">
-                      L
-                    </span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input placeholder="0" type={"number"} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="xr"
-              render={({ field }) => (
-                <FormItem className="w-full">
-                  <FormLabel>
-                    Initial Value for X
-                    <span style={{ verticalAlign: "sub" }} className="text-xs">
-                      R
-                    </span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input placeholder="0" type={"number"} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+    <div className="">
+      <div className="w-full bg-primary/90 text-white pt-6">
+        <div className="max-w-screen-md mx-auto sm:p-10 p-6 ">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 ">
+              <div className="flex">
+                <FormField
+                  control={form.control}
+                  name="equation"
+                  render={({ field }) => (
+                    <FormItem className="w-full">
+                      <FormControl>
+                        <Input
+                          placeholder="Enter equation"
+                          onFocus={() => setClicked(true)}
+                          autoComplete="off"
+                          className="py-8 text-xl text-black rounded-tr-none rounded-br-none drop-shadow-md"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-          <Button type="submit">Submit</Button>
-        </form>
-      </Form>
-      <div className="mt-10">
-        <h1 className="">Computation</h1>
-        <div className="mt-4">
-          <ul className="w-full flex justify-between">
-            {COLUMNS.map((item) => (
-              <li className="w-full border text-center" key={item}>
-                {item.slice(0, 1)}
-                <span style={{ verticalAlign: "sub" }} className="text-xs">
-                  {item.slice(1, 2)}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <ul className="flex flex-col divide-y border-x border-b">
-            {computation.map((items, index) => (
-              <div
-                key={index}
-                className="flex justify-between text-black/70 text-sm"
-              >
-                <li className="w-full text-center py-3">{index + 1}</li>
-                {Object.keys(items).map((key, i) => (
-                  <h1 className="w-full text-center py-3" key={i}>
-                    {items[key as keyof IterationType]}
-                  </h1>
-                ))}
+                <Button className="h-fullh h-auto px-6 rounded-tl-none rounded-bl-none drop-shadow-md">
+                  Go
+                </Button>
               </div>
-            ))}
-          </ul>
+              <div
+                className={cn(
+                  "w-full space-y-3 items-end max-h-0 overflow-hidden transition-all ease-in-out duration-300",
+                  {
+                    "max-h-96": clicked,
+                  }
+                )}
+              >
+                <div className="w-full flex gap-3">
+                  <FormField
+                    control={form.control}
+                    name="xl"
+                    render={({ field }) => (
+                      <FormItem className="w-full">
+                        <FormLabel>
+                          Initial Value for X
+                          <span
+                            style={{ verticalAlign: "sub" }}
+                            className="text-xs"
+                          >
+                            L
+                          </span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="0"
+                            className="text-black"
+                            type={"number"}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="xr"
+                    render={({ field }) => (
+                      <FormItem className="w-full">
+                        <FormLabel>
+                          Initial Value for X
+                          <span
+                            style={{ verticalAlign: "sub" }}
+                            className="text-xs"
+                          >
+                            R
+                          </span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="0"
+                            className="text-black"
+                            type={"number"}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="w-full flex gap-3 items-end ">
+                  <FormField
+                    control={form.control}
+                    name="precision"
+                    render={({ field }) => (
+                      <FormItem className="w-full">
+                        <FormLabel>Precision</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="0.1"
+                            className="text-black"
+                            type={"number"}
+                            {...field}
+                            defaultValue={0.1}
+                            step={0.1}
+                            min={0.1}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="w-full space-y-2">
+                    <Label className="">Round off</Label>
+                    <Select
+                      onValueChange={(val) =>
+                        setRoundOff(parseInt(val))
+                      }
+                    >
+                      <SelectTrigger className="w-full text-black">
+                        <SelectValue className="text-black" placeholder="4" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1</SelectItem>
+                        <SelectItem value="2">2</SelectItem>
+                        <SelectItem value="3">3</SelectItem>
+                        <SelectItem value="4">4</SelectItem>
+                        <SelectItem value="5">5</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+
+                  <div className="w-full space-y-2">
+                    <Label className="">Root finding type</Label>
+                    
+                  <Select
+                    onValueChange={(val) =>
+                      setType(val as Types["rootFinding"])
+                    }
+                  >
+                    <SelectTrigger className="w-full text-black">
+                      <SelectValue
+                        className="text-black"
+                        placeholder="Bisection"
+                      />
+                    </SelectTrigger>
+                    <SelectContent defaultValue={"bisection"}>
+                      <SelectItem value="bisection">Bisection</SelectItem>
+                      <SelectItem value="falsi">Falsi</SelectItem>
+                      <SelectItem value="newton" disabled>
+                        Newton Raphson
+                      </SelectItem>
+                      <SelectItem value="secant" disabled>
+                        Secant
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </Form>
+        </div>
+      </div>
+
+      <div
+        className={cn("max-w-screen-md mx-auto sm:p-10 p-6 hidden", {
+          block: computation.length > 0,
+        })}
+      >
+        <div className="mt-5">
+          <h1 className="">Computation</h1>
+          <div className="mt-4">
+            <ul className="w-full flex justify-between">
+              {COLUMNS.map((item) => (
+                <li className="w-full border text-center" key={item}>
+                  {item.slice(0, 1)}
+                  <span style={{ verticalAlign: "sub" }} className="text-xs">
+                    {item.slice(1, 2)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <ul className="flex flex-col divide-y border-x border-b">
+              {computation.map((items, index) => (
+                <div
+                  key={index}
+                  className="flex justify-between text-black/70 text-sm"
+                >
+                  <li className="w-full text-center py-3">{index + 1}</li>
+                  {Object.keys(items).map((key, i) => (
+                    <h1 className="w-full text-center py-3" key={i}>
+                      {items[key as keyof IterationType]}
+                    </h1>
+                  ))}
+                </div>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
     </div>
