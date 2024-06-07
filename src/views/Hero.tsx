@@ -32,7 +32,12 @@ import Lottie from "lottie-react";
 import fast from "@/assets/fast.json";
 import accurate from "@/assets/accurate.json";
 import reliable from "@/assets/reliable.json";
-import { bisectionXm, falsiXm } from "@/functions/root-finding";
+import {
+  bisectionXm,
+  falsiXm,
+  parseEquation,
+  roundOff,
+} from "@/functions/root-finding";
 
 interface IterationType {
   xl: number;
@@ -52,7 +57,7 @@ const Hero = () => {
   const [computation, setComputation] = useState<IterationType[]>([]);
   const [clicked, setClicked] = useState(false);
   const [type, setType] = useState<Types["rootFinding"]>("bisection");
-  console.log("🚀 ~ Hero ~ type:", type)
+  console.log("🚀 ~ Hero ~ type:", type);
   const [roundoff, setRoundOff] = useState(4);
 
   const formSchema = z
@@ -93,26 +98,13 @@ const Hero = () => {
     console.log(values.equation);
     setComputation([]);
 
-    const xl_equation = values.equation
-      .toLowerCase()
-      .replace(/\^/g, "**")
-      .replace(/x/g, `(${values.xl})`)
-      .replace(/(\d)\(/g, "$1*(")
-      .replace(/\)(\d)/g, ")*$1");
-    console.log("🚀 ~ onSubmit ~ xl_equation:", xl_equation)
-
-    const xr_equation = values.equation
-      .toLowerCase()
-      .replace(/\^/g, "**")
-      .replace(/x/g, `(${values.xr})`)
-      .replace(/(\d)\(/g, "$1*(")
-      .replace(/\)(\d)/g, ")*$1");
+    const xl_equation = parseEquation(values.equation, values.xl);
+    const xr_equation = parseEquation(values.equation, values.xr);
 
     const xl = values.xl;
     const xr = values.xr;
 
     const yl = eval(xl_equation);
-
     const yr = eval(xr_equation);
 
     const xm =
@@ -125,20 +117,14 @@ const Hero = () => {
             yr: yr,
           });
 
-    const ym = eval(
-      values.equation
-        .toLowerCase()
-        .replace(/\^/g, "**")
-        .replace(/x/g, `(${xm})`)
-        .replace(/(\d)\(/g, "$1*(")
-        .replace(/\)(\d)/g, ")*$1")
-    );
-    const fxl = parseFloat(Number(xl).toFixed(roundoff));
-    const fxm = parseFloat(Number(xm).toFixed(roundoff));
-    const fxr = parseFloat(Number(xr).toFixed(roundoff));
-    const fyl = parseFloat(Number(yl).toFixed(roundoff));
-    const fym = parseFloat(Number(ym).toFixed(roundoff));
-    const fyr = parseFloat(Number(yr).toFixed(roundoff));
+    const ym = eval(parseEquation(values.equation, xm));
+
+    const fxl = roundOff(xl, roundoff);
+    const fxm = roundOff(xm, roundoff);
+    const fxr = roundOff(xr, roundoff);
+    const fyl = roundOff(yl, roundoff);
+    const fym = roundOff(ym, roundoff);
+    const fyr = roundOff(yr, roundoff);
 
     const isRight = areOppositeSigns(fym, fyr);
 
@@ -163,17 +149,10 @@ const Hero = () => {
             yr: fyr,
           });
 
-    const new_ym = eval(
-      values.equation
-        .toLowerCase()
-        .replace(/\^/g, "**")
-        .replace(/x/g, `(${new_xm})`)
-        .replace(/(\d)\(/g, "$1*(")
-        .replace(/\)(\d)/g, ")*$1")
-    );
+    const new_ym = eval(parseEquation(values.equation, new_xm));
 
-    const parsed_ym = parseFloat(Number(new_ym).toFixed(roundoff));
-    const parsed_xm = parseFloat(Number(new_xm).toFixed(roundoff));
+    const parsed_ym = roundOff(new_ym, roundoff);
+    const parsed_xm = roundOff(new_xm, roundoff);
 
     Iterate({
       xl: isRight ? parsed_xm : fxl,
@@ -192,12 +171,12 @@ const Hero = () => {
     }, 400);
 
     const iterate_func = () => {
-      const fxl = parseFloat(Number(xl).toFixed(roundoff));
-      const fxm = parseFloat(Number(xm).toFixed(roundoff));
-      const fxr = parseFloat(Number(xr).toFixed(roundoff));
-      const fyl = parseFloat(Number(yl).toFixed(roundoff));
-      const fym = parseFloat(Number(ym).toFixed(roundoff));
-      const fyr = parseFloat(Number(yr).toFixed(roundoff));
+      const fxl = roundOff(xl, roundoff);
+      const fxm = roundOff(xm, roundoff);
+      const fxr = roundOff(xr, roundoff);
+      const fyl = roundOff(yl, roundoff);
+      const fym = roundOff(ym, roundoff);
+      const fyr = roundOff(yr, roundoff);
 
       const new_xm =
         type === "bisection"
@@ -209,17 +188,10 @@ const Hero = () => {
               yr: fyr,
             });
 
-      const new_ym = eval(
-        equation!
-          .toLowerCase()
-          .replace(/\^/g, "**")
-          .replace(/x/g, `(${new_xm})`)
-          .replace(/(\d)\(/g, "$1*(")
-          .replace(/\)(\d)/g, ")*$1")
-      );
+      const new_ym = eval(parseEquation(equation!, new_xm));
 
-      const parsed_ym = parseFloat(Number(new_ym).toFixed(roundoff));
-      const parsed_xm = parseFloat(Number(new_xm).toFixed(roundoff));
+      const parsed_ym = roundOff(new_ym, roundoff);
+      const parsed_xm = roundOff(new_xm, roundoff);
 
       const isRight = areOppositeSigns(parsed_ym, fyr);
 
