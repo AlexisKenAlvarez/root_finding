@@ -1,14 +1,6 @@
 import {
-  atan2,
-  chain,
   derivative,
-  e,
-  evaluate,
-  log,
-  pi,
-  pow,
-  round,
-  sqrt,
+  evaluate
 } from "mathjs";
 
 export const bisectionXm = (a: number, b: number) => (a + b) / 2;
@@ -45,3 +37,7 @@ export const getFx = (equation: string, x: number) =>
   evaluate(equation, {
     x
   });
+
+export const getNewXb = (xa: number, xb: number, fxa: number, fxb: number) => {
+  return xa - ((fxa * (xa - xb)) / (fxa - fxb))
+}

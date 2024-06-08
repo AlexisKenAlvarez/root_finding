@@ -1,4 +1,4 @@
-import Nav from "@/components/ui/Nav";
+import Nav from "@/components/Nav";
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";

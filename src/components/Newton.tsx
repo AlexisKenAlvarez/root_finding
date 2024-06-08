@@ -2,16 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import {
-  atan2,
-  chain,
-  derivative,
-  e,
-  evaluate,
-  log,
-  pi,
-  pow,
-  round,
-  sqrt,
+  round
 } from "mathjs";
 
 import {
@@ -24,22 +15,16 @@ import {
 } from "@/components/ui/form";
 import { z } from "zod";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
 import { Input } from "@/components/ui/input";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
-import { Label } from "@/components/ui/label";
+import { getFx, toDerivative } from "@/functions/root-finding";
+import { Types } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
-import { getFx, roundOff, toDerivative } from "@/functions/root-finding";
+import MethodDropdown from "./MethodDropdown";
+import RoundoffDropdown from "./RoundoffDropdown";
 
 interface IterationType {
   x: number;
@@ -49,25 +34,24 @@ interface IterationType {
   equation?: string;
 }
 
-interface Types {
-  rootFinding: "bisection" | "falsi" | "newton" | "secant";
-}
-
 const COLUMNS = ["i", "x", "f(x)", "f'(x)", "rel"];
 
-const NewtonSecant = ({
+const Newton = ({
   setType,
   type,
   open,
   handleOpen,
+  roundoff,
+  handleRound
 }: {
   setType: (type: Types["rootFinding"]) => void;
   type: Types["rootFinding"];
   handleOpen: () => void;
   open: boolean;
+  roundoff: number;
+  handleRound: (round_value: number) => void;
 }) => {
   const [computation, setComputation] = useState<IterationType[]>([]);
-  const [roundoff, setRound] = useState(4);
 
   const formSchema = z.object({
     equation: z
@@ -88,32 +72,39 @@ const NewtonSecant = ({
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    setComputation([]);
+    try {
+      setComputation([]);
+      const { xo, equation } = values;
 
-    const fx = getFx(values.equation, values.xo);
+      const fx = getFx(equation, xo);
+  
+      const fx_prime = toDerivative(equation, xo);
+  
+      const next_x = xo - fx / fx_prime;
+      const rel = ((next_x - xo) / next_x) * 100;
+  
+      setComputation((prev) => [
+        ...prev,
+        {
+          x: xo,
+          fx,
+          fx_prime,
+          rel: "0%",
+        },
+      ]);
+  
+      Iterate({
+        x: round(next_x, roundoff),
+        fx: round(getFx(equation, next_x), roundoff),
+        fx_prime: round(toDerivative(equation, next_x), roundoff),
+        equation: equation,
+        rel,
+      });
+    } catch (error) {
+      console.log("Invalid equation");
+      form.setError("equation", { message: "Invalid equation" });
+    }
 
-    const fx_prime = toDerivative(values.equation, values.xo);
-
-    const next_x = values.xo - fx / fx_prime;
-    const rel = ((next_x - values.xo) / next_x) * 100;
-
-    setComputation((prev) => [
-      ...prev,
-      {
-        x: values.xo,
-        fx,
-        fx_prime,
-        rel: "0%",
-      },
-    ]);
-
-    Iterate({
-      x: round(next_x, roundoff),
-      fx: round(getFx(values.equation, next_x), roundoff),
-      fx_prime: round(toDerivative(values.equation, next_x), roundoff),
-      equation: values.equation,
-      rel,
-    });
   }
 
   const Iterate = ({
@@ -166,8 +157,8 @@ const NewtonSecant = ({
 
   return (
     <div className="">
-      <div className="w-full bg-primary/90 text-white pt-4">
-        <div className="max-w-screen-md mx-auto sm:p-10 p-6 ">
+      <div className="w-full bg-primary/90 text-white">
+        <div className="max-w-screen-md mx-auto sm:pb-10 bp-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 ">
               <div className="flex">
@@ -190,7 +181,7 @@ const NewtonSecant = ({
                   )}
                 />
 
-                <Button className="h-fullh h-auto px-6 rounded-tl-none rounded-bl-none drop-shadow-md">
+                <Button className="h-16 px-6 rounded-tl-none rounded-bl-none drop-shadow-md">
                   Go
                 </Button>
               </div>
@@ -244,32 +235,10 @@ const NewtonSecant = ({
                       </FormItem>
                     )}
                   />
-                  <div className="w-full space-y-2">
-                    <Label className="">Root finding type</Label>
 
-                    <Select
-                      onValueChange={(val) =>
-                        setType(val as Types["rootFinding"])
-                      }
-                    >
-                      <SelectTrigger className="w-full text-black">
-                        <SelectValue
-                          className="text-black"
-                          placeholder={
-                            type.charAt(0).toUpperCase() + type.slice(1)
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent defaultValue={type}>
-                        <SelectItem value="bisection">Bisection</SelectItem>
-                        <SelectItem value="falsi">Falsi</SelectItem>
-                        <SelectItem value="newton">Newton Raphson</SelectItem>
-                        <SelectItem value="secant" disabled>
-                          Secant
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <RoundoffDropdown value={roundoff} setRoundOff={handleRound} />
+                  <MethodDropdown type={type} setType={setType} />
+                  
                 </div>
               </div>
             </form>
@@ -314,4 +283,4 @@ const NewtonSecant = ({
   );
 };
 
-export default NewtonSecant;
+export default Newton;

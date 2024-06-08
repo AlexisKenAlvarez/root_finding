@@ -1,3 +1,3 @@
 export interface Types {
-  rootFinding: "bisection" | "falsi" | "newton" | "secant";
+  rootFinding: "bisection" | "false Position" | "newton Raphson" | "secant";
 }

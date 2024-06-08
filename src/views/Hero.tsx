@@ -4,8 +4,10 @@ import accurate from "@/assets/accurate.json";
 import fast from "@/assets/fast.json";
 import reliable from "@/assets/reliable.json";
 import BisectionFalsi from "@/components/BisectionFalsi";
-import NewtonSecant from "@/components/NewtonSecant";
+import Newton from "@/components/Newton";
+import Secant from "@/components/Secant";
 import { Types } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import Lottie from "lottie-react";
 import { useState, useCallback } from "react";
 
@@ -35,9 +37,15 @@ const Hero = () => {
   const [open, setOpen] = useState(false);
 
   const [type, setType] = useState<Types["rootFinding"]>("bisection");
+  const [roundoff, setRound] = useState(4);
+  console.log("🚀 ~ Hero ~ roundoff:", roundoff);
 
   const handleOpen = useCallback(() => {
     setOpen(true);
+  }, []);
+
+  const handleRound = useCallback((round_value: number) => {
+    setRound(round_value);
   }, []);
 
   const handleType = useCallback((type: Types["rootFinding"]) => {
@@ -46,30 +54,51 @@ const Hero = () => {
 
   const VIEWS = [
     {
-      methods: ["bisection", "falsi"],
+      methods: ["bisection", "false Position"],
       component: BisectionFalsi,
     },
     {
-      methods: ["newton", "secant"],
-      component: NewtonSecant,
+      methods: ["newton Raphson"],
+      component: Newton,
+    },
+    {
+      methods: ["secant"],
+      component: Secant,
     },
   ];
 
   return (
     <div className="">
-      {VIEWS.map((item, index) => {
-        if (item.methods.includes(type)) {
-          return (
-            <item.component
-              setType={handleType}
-              type={type}
-              handleOpen={handleOpen}
-              open={open}
-              key={index}
-            />
-          );
-        }
-      })}
+      <div className="h-12 w-full bg-primary/90"></div>
+      <div
+        className={cn(
+          "max-h-0 overflow-hidden transition-all ease-in-out duration-300",
+          { "max-h-24": open }
+        )}
+      >
+        <h1 className="md:text-2xl text-xl font-bold text-center bg-primary/90 pb-6 capitalize text-white ">
+          {type} method
+        </h1>
+      </div>
+
+      <div className="">
+        {VIEWS.map((item, index) => {
+          if (item.methods.includes(type)) {
+            return (
+              <item.component
+                roundoff={roundoff}
+                handleRound={handleRound}
+                setType={handleType}
+                type={type}
+                handleOpen={handleOpen}
+                open={open}
+                key={index}
+              />
+            );
+          }
+        })}
+      </div>
+
       <div className="max-w-screen-lg mx-auto sm:p-10 p-6">
         <h1 className="md:text-2xl text-xl font-bold text-center">
           RootFinder, Making root finding easier.

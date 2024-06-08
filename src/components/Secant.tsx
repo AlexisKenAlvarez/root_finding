@@ -2,6 +2,19 @@
 
 import { Button } from "@/components/ui/button";
 import {
+  atan2,
+  chain,
+  derivative,
+  e,
+  evaluate,
+  log,
+  pi,
+  pow,
+  round,
+  sqrt,
+} from "mathjs";
+
+import {
   Form,
   FormControl,
   FormField,
@@ -26,30 +39,27 @@ import { useForm } from "react-hook-form";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
-
-import { bisectionXm, falsiXm, getFx } from "@/functions/root-finding";
-import { evaluate, round } from "mathjs";
+import { getFx, getNewXb, roundOff, toDerivative } from "@/functions/root-finding";
 import MethodDropdown from "./MethodDropdown";
-import RoundoffDropdown from "./RoundoffDropdown";
 import { Types } from "@/lib/types";
+import RoundoffDropdown from "./RoundoffDropdown";
 
 interface IterationType {
-  xl: number;
-  xm: number;
-  xr: number;
-  yl: number;
-  ym: number;
-  yr: number;
+  xa: number;
+  xb: number;
+  fxa: number;
+  fxb: number;
+  rel: string;
   equation?: string;
 }
 
-const COLUMNS = ["i", "XL", "Xm", "XR", "YL", "Ym", "YR"];
+const COLUMNS = ["i", "xa", "xb", "f(xa)", "f(xb)", "rel"];
 
-const BisectionFalsi = ({
+const Secant = ({
   setType,
   type,
-  handleOpen,
   open,
+  handleOpen,
   roundoff,
   handleRound,
 }: {
@@ -62,36 +72,22 @@ const BisectionFalsi = ({
 }) => {
   const [computation, setComputation] = useState<IterationType[]>([]);
 
-  const formSchema = z
-    .object({
-      equation: z
-        .string()
-        .min(2, { message: "Invalid equation" })
-        .max(50, { message: "Invalid equation" }),
-      xl: z.coerce.number(),
-      xr: z.coerce.number(),
-      precision: z.coerce.number(),
-    })
-    .superRefine((data, ctx) => {
-      if (data.xl >= data.xr) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "xl must be less than xr",
-          path: ["xl"],
-        });
-      }
-    });
-
-  function areOppositeSigns(num1: number, num2: number) {
-    return num1 * num2 < 0;
-  }
+  const formSchema = z.object({
+    equation: z
+      .string()
+      .min(2, { message: "Invalid equation" })
+      .max(50, { message: "Invalid equation" }),
+    xa: z.coerce.number(),
+    xb: z.coerce.number(),
+    precision: z.coerce.number(),
+  });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       equation: "",
-      xl: 0,
-      xr: 0,
+      xa: 0,
+      xb: 0,
       precision: 0.1,
     },
   });
@@ -100,134 +96,90 @@ const BisectionFalsi = ({
     try {
       setComputation([]);
 
-      const { xl, xr, equation } = values
+      const { xa, xb, equation } = values;
 
-      const yl = getFx(equation, xl);
-      const yr = getFx(equation, xr);
-
-      const xm =
-        type === "bisection"
-          ? bisectionXm(xl, xr)
-          : falsiXm({
-              xl: xl,
-              xr: xr,
-              yl: yl,
-              yr: yr,
-            });
-
-      const ym = getFx(equation, xm);
-
-      const fxl = round(xl, roundoff);
-      const fxm = round(xm, roundoff);
-      const fxr = round(xr, roundoff);
-      const fyl = round(yl, roundoff);
-      const fym = round(ym, roundoff);
-      const fyr = round(yr, roundoff);
-
-      const isRight = areOppositeSigns(fym, fyr);
+      const fxa = getFx(equation, xa)
+      const fxb = getFx(equation, xb)
 
       setComputation((prev) => [
+        ...prev,
         {
-          xl: fxl,
-          xm: fxm,
-          xr: fxr,
-          yl: fyl,
-          ym: fym,
-          yr: fyr,
-        },
-      ]);
+          xa,
+          xb,
+          fxa,
+          fxb,
+          rel: `0%`,
+        }
+      ])
 
-      const new_xm =
-        type === "bisection"
-          ? bisectionXm(fxl, fxr)
-          : falsiXm({
-              xl: fxl,
-              xr: fxr,
-              yl: fyl,
-              yr: fyr,
-            });
-
-      const new_ym = getFx(equation, new_xm);
-
-      const parsed_ym = round(new_ym, roundoff);
-      const parsed_xm = round(new_xm, roundoff);
+      const new_xb = getNewXb(xa, xb, fxa, fxb)
+      const rel = Math.abs(round(((new_xb - xb) / new_xb) * 100, 2))
 
       Iterate({
-        xl: isRight ? parsed_xm : fxl,
-        xm: parsed_xm,
-        xr: isRight ? fxr : parsed_xm,
-        yl: isRight ? parsed_ym : fyl,
-        ym: parsed_ym,
-        yr: isRight ? fyr : parsed_ym,
-        equation: equation,
-      });
+        xa: round(xb, roundoff),
+        xb: round(new_xb, roundoff),
+        fxa: round(getFx(equation, xb), roundoff),
+        fxb: round(getFx(equation, new_xb), roundoff),
+        equation,
+        rel
+      })
+
     } catch (error) {
       console.log(error);
-      form.setError("equation", {
-        message: "Invalid equation",
-      });
+      form.setError("equation", { message: "Invalid equation" });
     }
   }
 
-  const Iterate = ({ xl, xm, xr, yl, ym, yr, equation }: IterationType) => {
+  const Iterate = ({
+    xa,
+    xb,
+    fxa,
+    fxb,
+    equation,
+    rel
+  }: {
+    xa: number;
+    xb: number;
+    fxa: number;
+    fxb: number;
+    equation: string;
+    rel: number;
+  }) => {
     const intervalId = setTimeout(() => {
       iterate_func();
     }, 400);
 
     const iterate_func = () => {
-      const fxl = round(xl, roundoff);
-      const fxm = round(xm, roundoff);
-      const fxr = round(xr, roundoff);
-      const fyl = round(yl, roundoff);
-      const fym = round(ym, roundoff);
-      const fyr = round(yr, roundoff);
-
-      const new_xm =
-        type === "bisection"
-          ? bisectionXm(fxl, fxr)
-          : falsiXm({
-              xl: fxl,
-              xr: fxr,
-              yl: fyl,
-              yr: fyr,
-            });
-
-      const new_ym = getFx(equation!, new_xm);
-
-      const parsed_ym = round(new_ym, roundoff);
-      const parsed_xm = round(new_xm, roundoff);
-
-      const isRight = areOppositeSigns(parsed_ym, fyr);
 
       setComputation((prev) => [
         ...prev,
         {
-          xl: fxl,
-          xm: parsed_xm,
-          xr: fxr,
-          yl: fyl,
-          ym: parsed_ym,
-          yr: fyr,
-        },
-      ]);
+          xa,
+          xb,
+          fxa,
+          fxb,
+          rel: `${rel}%`,
+        }
+      ])
 
-      if (
-        parsed_ym === 0 ||
-        Math.abs(parsed_ym - fym) < form.getValues("precision")
-      ) {
-        return;
+      const new_xb = getNewXb(xa, xb, fxa, fxb)
+      const new_rel = Math.abs(round(((new_xb - xb) / new_xb) * 100, 2))
+
+      if (Math.abs(rel) < form.getValues("precision")) {
+        clearTimeout(intervalId)
+        return
       }
 
       Iterate({
-        xl: isRight ? parsed_xm : fxl,
-        xm: parsed_xm,
-        xr: isRight ? fxr : parsed_xm,
-        yl: isRight ? parsed_ym : fyl,
-        ym: parsed_ym,
-        yr: isRight ? fyr : parsed_ym,
-        equation: equation,
-      });
-    };
+        xa: round(xb, roundoff),
+        xb: round(new_xb, roundoff),
+        fxa: round(getFx(equation, xb), roundoff),
+        fxb: round(getFx(equation, new_xb), roundoff),
+        equation,
+        rel: new_rel
+      })
+    }
+    
   };
 
   return (
@@ -271,17 +223,11 @@ const BisectionFalsi = ({
                 <div className="w-full flex gap-3">
                   <FormField
                     control={form.control}
-                    name="xl"
+                    name="xa"
                     render={({ field }) => (
                       <FormItem className="w-full">
                         <FormLabel className="!text-white">
-                          Initial Value for X
-                          <span
-                            style={{ verticalAlign: "sub" }}
-                            className="text-xs"
-                          >
-                            L
-                          </span>
+                          Initial Value for X<sub className="text-xs">a</sub>
                         </FormLabel>
                         <FormControl>
                           <Input
@@ -297,17 +243,11 @@ const BisectionFalsi = ({
                   />
                   <FormField
                     control={form.control}
-                    name="xr"
+                    name="xb"
                     render={({ field }) => (
                       <FormItem className="w-full">
-                        <FormLabel>
-                          Initial Value for X
-                          <span
-                            style={{ verticalAlign: "sub" }}
-                            className="text-xs"
-                          >
-                            R
-                          </span>
+                        <FormLabel className="!text-white">
+                          Initial Value for X<sub className="text-xs">b</sub>
                         </FormLabel>
                         <FormControl>
                           <Input
@@ -317,13 +257,13 @@ const BisectionFalsi = ({
                             {...field}
                           />
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-orange-100" />
                       </FormItem>
                     )}
                   />
                 </div>
 
-                <div className="w-full flex gap-3 items-end ">
+                <div className="flex gap-3">
                   <FormField
                     control={form.control}
                     name="precision"
@@ -345,12 +285,7 @@ const BisectionFalsi = ({
                       </FormItem>
                     )}
                   />
-
-                  <RoundoffDropdown
-                    setRoundOff={handleRound}
-                    value={roundoff}
-                  />
-
+                  <RoundoffDropdown value={roundoff} setRoundOff={handleRound} />
                   <MethodDropdown type={type} setType={setType} />
                 </div>
               </div>
@@ -370,10 +305,7 @@ const BisectionFalsi = ({
             <ul className="w-full flex justify-between">
               {COLUMNS.map((item) => (
                 <li className="w-full border text-center" key={item}>
-                  {item.slice(0, 1)}
-                  <span style={{ verticalAlign: "sub" }} className="text-xs">
-                    {item.slice(1, 2)}
-                  </span>
+                  {item}
                 </li>
               ))}
             </ul>
@@ -385,7 +317,7 @@ const BisectionFalsi = ({
                 >
                   <li className="w-full text-center py-3">{index + 1}</li>
                   {Object.keys(items).map((key, i) => (
-                    <h1 className="w-full text-center py-3" key={i}>
+                    <h1 className="w-full text-center py-3 truncate" key={i}>
                       {items[key as keyof IterationType]}
                     </h1>
                   ))}
@@ -399,4 +331,4 @@ const BisectionFalsi = ({
   );
 };
 
-export default BisectionFalsi;
+export default Secant;
