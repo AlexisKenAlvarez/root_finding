@@ -100,7 +100,7 @@ const BisectionFalsi = ({
     try {
       setComputation([]);
 
-      const { xl, xr, equation } = values
+      const { xl, xr, equation } = values;
 
       const yl = getFx(equation, xl);
       const yr = getFx(equation, xr);
@@ -170,64 +170,58 @@ const BisectionFalsi = ({
   }
 
   const Iterate = ({ xl, xm, xr, yl, ym, yr, equation }: IterationType) => {
-    const intervalId = setTimeout(() => {
-      iterate_func();
-    }, 400);
+    const fxl = round(xl, roundoff);
+    const fxm = round(xm, roundoff);
+    const fxr = round(xr, roundoff);
+    const fyl = round(yl, roundoff);
+    const fym = round(ym, roundoff);
+    const fyr = round(yr, roundoff);
 
-    const iterate_func = () => {
-      const fxl = round(xl, roundoff);
-      const fxm = round(xm, roundoff);
-      const fxr = round(xr, roundoff);
-      const fyl = round(yl, roundoff);
-      const fym = round(ym, roundoff);
-      const fyr = round(yr, roundoff);
+    const new_xm =
+      type === "bisection"
+        ? bisectionXm(fxl, fxr)
+        : falsiXm({
+            xl: fxl,
+            xr: fxr,
+            yl: fyl,
+            yr: fyr,
+          });
 
-      const new_xm =
-        type === "bisection"
-          ? bisectionXm(fxl, fxr)
-          : falsiXm({
-              xl: fxl,
-              xr: fxr,
-              yl: fyl,
-              yr: fyr,
-            });
+    const new_ym = getFx(equation!, new_xm);
 
-      const new_ym = getFx(equation!, new_xm);
+    const parsed_ym = round(new_ym, roundoff);
+    const parsed_xm = round(new_xm, roundoff);
 
-      const parsed_ym = round(new_ym, roundoff);
-      const parsed_xm = round(new_xm, roundoff);
+    const isRight = areOppositeSigns(parsed_ym, fyr);
 
-      const isRight = areOppositeSigns(parsed_ym, fyr);
-
-      setComputation((prev) => [
-        ...prev,
-        {
-          xl: fxl,
-          xm: parsed_xm,
-          xr: fxr,
-          yl: fyl,
-          ym: parsed_ym,
-          yr: fyr,
-        },
-      ]);
-
-      if (
-        parsed_ym === 0 ||
-        Math.abs(parsed_ym - fym) < form.getValues("precision")
-      ) {
-        return;
-      }
-
-      Iterate({
-        xl: isRight ? parsed_xm : fxl,
+    setComputation((prev) => [
+      ...prev,
+      {
+        xl: fxl,
         xm: parsed_xm,
-        xr: isRight ? fxr : parsed_xm,
-        yl: isRight ? parsed_ym : fyl,
+        xr: fxr,
+        yl: fyl,
         ym: parsed_ym,
-        yr: isRight ? fyr : parsed_ym,
-        equation: equation,
-      });
-    };
+        yr: fyr,
+      },
+    ]);
+
+    if (
+      parsed_ym === 0 ||
+      Math.abs(parsed_ym - fym) < form.getValues("precision")
+    ) {
+      return;
+    }
+
+    Iterate({
+      xl: isRight ? parsed_xm : fxl,
+      xm: parsed_xm,
+      xr: isRight ? fxr : parsed_xm,
+      yl: isRight ? parsed_ym : fyl,
+      ym: parsed_ym,
+      yr: isRight ? fyr : parsed_ym,
+      equation: equation,
+    });
   };
 
   return (
@@ -365,7 +359,7 @@ const BisectionFalsi = ({
         })}
       >
         <div className="mt-5">
-          <h1 className="text-lg font-medium text-center">Computation</h1>
+          <h1 className="text-lg font-medium text-center">Iteration</h1>
           <div className="mt-4">
             <ul className="w-full flex justify-between">
               {COLUMNS.map((item) => (
@@ -392,6 +386,10 @@ const BisectionFalsi = ({
                 </div>
               ))}
             </ul>
+          </div>
+          <div className="mt-2 rounded-md py-3 px-2 w-fit mx-auto flex items-center gap-1">
+            <h1 className="font-medium">Root Value:</h1>
+            <h2 className="font-bold text-sm bg-slate-100 py-2 px-3 rounded-md text-primary">{computation[computation.length - 1]?.xm}</h2>
           </div>
         </div>
       </div>

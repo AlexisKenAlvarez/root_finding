@@ -17,7 +17,7 @@ const Nav = () => {
         rel="noopener noreferrer"
         target="_blank"
       >
-        <Button className="w-10 h-10 grid place-content-center rounded-full bg-slate-100">
+        <Button className="w-10 h-10 grid place-content-center rounded-full bg-slate-100 hover:bg-white/90">
           <FaGithub fill="black" size={30} />
         </Button>
       </a>

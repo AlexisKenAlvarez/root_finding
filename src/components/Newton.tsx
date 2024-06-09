@@ -1,9 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-  round
-} from "mathjs";
+import { round } from "mathjs";
 
 import {
   Form,
@@ -42,7 +40,7 @@ const Newton = ({
   open,
   handleOpen,
   roundoff,
-  handleRound
+  handleRound,
 }: {
   setType: (type: Types["rootFinding"]) => void;
   type: Types["rootFinding"];
@@ -77,12 +75,12 @@ const Newton = ({
       const { xo, equation } = values;
 
       const fx = getFx(equation, xo);
-  
+
       const fx_prime = toDerivative(equation, xo);
-  
+
       const next_x = xo - fx / fx_prime;
       const rel = ((next_x - xo) / next_x) * 100;
-  
+
       setComputation((prev) => [
         ...prev,
         {
@@ -92,7 +90,7 @@ const Newton = ({
           rel: "0%",
         },
       ]);
-  
+
       Iterate({
         x: round(next_x, roundoff),
         fx: round(getFx(equation, next_x), roundoff),
@@ -104,7 +102,6 @@ const Newton = ({
       console.log("Invalid equation");
       form.setError("equation", { message: "Invalid equation" });
     }
-
   }
 
   const Iterate = ({
@@ -120,39 +117,32 @@ const Newton = ({
     equation: string;
     rel: number;
   }) => {
-    const intervalId = setTimeout(() => {
-      iterate_func();
-    }, 400);
+    const next_x = x - fx / fx_prime;
 
-    const iterate_func = () => {
-      const next_x = x - fx / fx_prime;
+    setComputation((prev) => [
+      ...prev,
+      {
+        x: round(x, roundoff),
+        fx: round(fx, roundoff),
+        fx_prime: round(fx_prime, roundoff),
+        rel: `${Math.abs(round(rel, 3))}%`,
+      },
+    ]);
+    const new_rel = ((next_x - x) / next_x) * 100;
 
-      setComputation((prev) => [
-        ...prev,
-        {
-          x: round(x, roundoff),
-          fx: round(fx, roundoff),
-          fx_prime: round(fx_prime, roundoff),
-          rel: `${Math.abs(round(rel, 3))}%`,
-        },
-      ]);
-      const new_rel = ((next_x - x) / next_x) * 100;
+    const condition = Math.abs(round(rel, 2)) < form.getValues("precision");
 
-      const condition = Math.abs(round(rel, 2)) < form.getValues("precision");
+    if (condition) {
+      return;
+    }
 
-      if (condition) {
-        clearTimeout(intervalId);
-        return;
-      }
-
-      Iterate({
-        x: round(next_x, roundoff),
-        fx: round(getFx(equation, next_x), roundoff),
-        fx_prime: round(toDerivative(equation, next_x), roundoff),
-        equation: equation,
-        rel: Math.abs(round(new_rel, 3)),
-      });
-    };
+    Iterate({
+      x: round(next_x, roundoff),
+      fx: round(getFx(equation, next_x), roundoff),
+      fx_prime: round(toDerivative(equation, next_x), roundoff),
+      equation: equation,
+      rel: Math.abs(round(new_rel, 3)),
+    });
   };
 
   return (
@@ -236,9 +226,11 @@ const Newton = ({
                     )}
                   />
 
-                  <RoundoffDropdown value={roundoff} setRoundOff={handleRound} />
+                  <RoundoffDropdown
+                    value={roundoff}
+                    setRoundOff={handleRound}
+                  />
                   <MethodDropdown type={type} setType={setType} />
-                  
                 </div>
               </div>
             </form>
@@ -252,7 +244,7 @@ const Newton = ({
         })}
       >
         <div className="mt-5">
-          <h1 className="text-lg font-medium text-center">Computation</h1>
+          <h1 className="text-lg font-medium text-center">Iteration</h1>
           <div className="mt-4">
             <ul className="w-full flex justify-between">
               {COLUMNS.map((item) => (
@@ -276,6 +268,12 @@ const Newton = ({
                 </div>
               ))}
             </ul>
+          </div>
+          <div className="mt-2 rounded-md py-3 px-2 w-fit mx-auto flex items-center gap-1">
+            <h1 className="font-medium">Root Value:</h1>
+            <h2 className="font-bold text-sm bg-slate-100 py-2 px-3 rounded-md text-primary">
+              {computation[computation.length - 1]?.x}
+            </h2>
           </div>
         </div>
       </div>

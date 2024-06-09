@@ -39,7 +39,12 @@ import { useForm } from "react-hook-form";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
-import { getFx, getNewXb, roundOff, toDerivative } from "@/functions/root-finding";
+import {
+  getFx,
+  getNewXb,
+  roundOff,
+  toDerivative,
+} from "@/functions/root-finding";
 import MethodDropdown from "./MethodDropdown";
 import { Types } from "@/lib/types";
 import RoundoffDropdown from "./RoundoffDropdown";
@@ -98,8 +103,8 @@ const Secant = ({
 
       const { xa, xb, equation } = values;
 
-      const fxa = getFx(equation, xa)
-      const fxb = getFx(equation, xb)
+      const fxa = getFx(equation, xa);
+      const fxb = getFx(equation, xb);
 
       setComputation((prev) => [
         ...prev,
@@ -109,11 +114,11 @@ const Secant = ({
           fxa,
           fxb,
           rel: `0%`,
-        }
-      ])
+        },
+      ]);
 
-      const new_xb = getNewXb(xa, xb, fxa, fxb)
-      const rel = Math.abs(round(((new_xb - xb) / new_xb) * 100, 2))
+      const new_xb = getNewXb(xa, xb, fxa, fxb);
+      const rel = Math.abs(round(((new_xb - xb) / new_xb) * 100, 2));
 
       Iterate({
         xa: round(xb, roundoff),
@@ -121,9 +126,8 @@ const Secant = ({
         fxa: round(getFx(equation, xb), roundoff),
         fxb: round(getFx(equation, new_xb), roundoff),
         equation,
-        rel
-      })
-
+        rel,
+      });
     } catch (error) {
       console.log(error);
       form.setError("equation", { message: "Invalid equation" });
@@ -136,7 +140,7 @@ const Secant = ({
     fxa,
     fxb,
     equation,
-    rel
+    rel,
   }: {
     xa: number;
     xb: number;
@@ -145,41 +149,32 @@ const Secant = ({
     equation: string;
     rel: number;
   }) => {
-    const intervalId = setTimeout(() => {
-      iterate_func();
-    }, 400);
+    setComputation((prev) => [
+      ...prev,
+      {
+        xa,
+        xb,
+        fxa,
+        fxb,
+        rel: `${rel}%`,
+      },
+    ]);
 
-    const iterate_func = () => {
+    const new_xb = getNewXb(xa, xb, fxa, fxb);
+    const new_rel = Math.abs(round(((new_xb - xb) / new_xb) * 100, 2));
 
-      setComputation((prev) => [
-        ...prev,
-        {
-          xa,
-          xb,
-          fxa,
-          fxb,
-          rel: `${rel}%`,
-        }
-      ])
-
-      const new_xb = getNewXb(xa, xb, fxa, fxb)
-      const new_rel = Math.abs(round(((new_xb - xb) / new_xb) * 100, 2))
-
-      if (Math.abs(rel) < form.getValues("precision")) {
-        clearTimeout(intervalId)
-        return
-      }
-
-      Iterate({
-        xa: round(xb, roundoff),
-        xb: round(new_xb, roundoff),
-        fxa: round(getFx(equation, xb), roundoff),
-        fxb: round(getFx(equation, new_xb), roundoff),
-        equation,
-        rel: new_rel
-      })
+    if (Math.abs(rel) < form.getValues("precision")) {
+      return;
     }
-    
+
+    Iterate({
+      xa: round(xb, roundoff),
+      xb: round(new_xb, roundoff),
+      fxa: round(getFx(equation, xb), roundoff),
+      fxb: round(getFx(equation, new_xb), roundoff),
+      equation,
+      rel: new_rel,
+    });
   };
 
   return (
@@ -285,7 +280,10 @@ const Secant = ({
                       </FormItem>
                     )}
                   />
-                  <RoundoffDropdown value={roundoff} setRoundOff={handleRound} />
+                  <RoundoffDropdown
+                    value={roundoff}
+                    setRoundOff={handleRound}
+                  />
                   <MethodDropdown type={type} setType={setType} />
                 </div>
               </div>
@@ -300,11 +298,11 @@ const Secant = ({
         })}
       >
         <div className="mt-5">
-          <h1 className="text-lg font-medium text-center">Computation</h1>
+          <h1 className="text-lg font-medium text-center">Iteration</h1>
           <div className="mt-4">
             <ul className="w-full flex justify-between">
               {COLUMNS.map((item) => (
-                <li className="w-full border text-center" key={item}>
+                <li className="w-full border text-center py-1" key={item}>
                   {item}
                 </li>
               ))}
@@ -324,6 +322,12 @@ const Secant = ({
                 </div>
               ))}
             </ul>
+          </div>
+          <div className="mt-2 rounded-md py-3 px-2 w-fit mx-auto flex items-center gap-1">
+            <h1 className="font-medium">Root Value:</h1>
+            <h2 className="font-bold text-sm bg-slate-100 py-2 px-3 rounded-md text-primary">
+              {computation[computation.length - 1]?.xb}
+            </h2>
           </div>
         </div>
       </div>
