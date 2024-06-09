@@ -113,7 +113,7 @@ const Secant = ({
           xb,
           fxa,
           fxb,
-          rel: `0%`,
+          rel: `N/A`,
         },
       ]);
 

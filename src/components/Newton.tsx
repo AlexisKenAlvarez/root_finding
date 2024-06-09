@@ -87,7 +87,7 @@ const Newton = ({
           x: xo,
           fx,
           fx_prime,
-          rel: "0%",
+          rel: "N/A",
         },
       ]);
 
