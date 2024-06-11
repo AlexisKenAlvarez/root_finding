@@ -61,6 +61,7 @@ const BisectionFalsi = ({
   handleRound: (round_value: number) => void;
 }) => {
   const [computation, setComputation] = useState<IterationType[]>([]);
+  const [invalid, setInvalid] = useState("");
 
   const formSchema = z
     .object({
@@ -74,6 +75,8 @@ const BisectionFalsi = ({
     })
     .superRefine((data, ctx) => {
       if (data.xl >= data.xr) {
+        setInvalid("xl must be less than xr");
+
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "xl must be less than xr",
@@ -99,11 +102,17 @@ const BisectionFalsi = ({
   function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setComputation([]);
+      setInvalid("");
 
       const { xl, xr, equation } = values;
 
       const yl = getFx(equation, xl);
       const yr = getFx(equation, xr);
+
+      if (!areOppositeSigns(yl, yr)) {
+        setInvalid("Signs of f(xl) and f(xr) must be opposite");
+        return;
+      }
 
       const xm =
         type === "bisection"
@@ -355,6 +364,17 @@ const BisectionFalsi = ({
 
       <div
         className={cn("max-w-screen-md mx-auto sm:p-10 p-6 hidden", {
+          block: invalid !== "",
+        })}
+      >
+        <div className="mt-5 text-center">
+          <h1 className="">Validty of assumptions: False</h1>
+          <p className="">Reason: {invalid}</p>
+        </div>
+      </div>
+
+      <div
+        className={cn("max-w-screen-md mx-auto sm:p-10 p-6 hidden", {
           block: computation.length > 0,
         })}
       >
@@ -389,8 +409,12 @@ const BisectionFalsi = ({
           </div>
           <div className="mt-2 rounded-md py-3 px-2 w-fit mx-auto flex items-center gap-1">
             <h1 className="font-medium">Root Value:</h1>
-            <h2 className="font-bold text-sm bg-slate-100 py-2 px-3 rounded-md text-primary">{computation[computation.length - 1]?.xm}</h2>
+            <h2 className="font-bold text-sm bg-slate-100 py-2 px-3 rounded-md text-primary">
+              {computation[computation.length - 1]?.xm}
+            </h2>
           </div>
+
+          <h1 className="text-center">Validty of assumptions: All condition have been passed.</h1>
         </div>
       </div>
     </div>
