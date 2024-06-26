@@ -176,6 +176,12 @@ const Newton = ({
     ]);
     const new_rel = ((next_x - x) / next_x) * 100;
 
+    const condition = Math.abs(round(rel, 2)) < form.getValues("precision");
+
+    if (condition) {
+      return;
+    }
+
     setStep((prev) => [
       ...prev,
       {
@@ -212,11 +218,7 @@ const Newton = ({
       },
     ]);
 
-    const condition = Math.abs(round(rel, 2)) < form.getValues("precision");
 
-    if (condition) {
-      return;
-    }
 
     Iterate({
       x: next_x,
