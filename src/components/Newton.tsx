@@ -74,9 +74,10 @@ const Newton = ({
       setComputation([]);
       const { xo, equation } = values;
 
-      const fx = getFx(equation, xo);
+      const fx = round(getFx(equation, xo), roundoff)
 
-      const fx_prime = toDerivative(equation, xo);
+      const fx_prime = round(toDerivative(equation, xo), roundoff)
+
 
       const next_x = xo - fx / fx_prime;
       const rel = ((next_x - xo) / next_x) * 100;

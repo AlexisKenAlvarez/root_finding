@@ -38,7 +38,6 @@ const Hero = () => {
 
   const [type, setType] = useState<Types["rootFinding"]>("bisection");
   const [roundoff, setRound] = useState(4);
-  console.log("🚀 ~ Hero ~ roundoff:", roundoff);
 
   const handleOpen = useCallback(() => {
     setOpen(true);
