@@ -101,7 +101,7 @@ const Newton = ({
       setStep((prev) => [
         ...prev, {
           title: "For the next f(x)",
-          value: `f(x) = ${equation.replace("x", `(${round(next_x, roundoff)})`)} = ${round(getFx(equation, round(next_x, roundoff)), roundoff)}`,
+          value: `f(x) = ${equation.replaceAll("x", `(${round(next_x, roundoff)})`)} = ${round(getFx(equation, round(next_x, roundoff)), roundoff)}`,
           iteration: 2
         }
       ])
