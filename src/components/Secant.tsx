@@ -103,8 +103,8 @@ const Secant = ({
 
       const { xa, xb, equation } = values;
 
-      const fxa = getFx(equation, xa);
-      const fxb = getFx(equation, xb);
+      const fxa = round(getFx(equation, xa), roundoff);
+      const fxb = round(getFx(equation, xb), roundoff);
 
       setComputation((prev) => [
         ...prev,
@@ -160,7 +160,7 @@ const Secant = ({
       },
     ]);
 
-    const new_xb = getNewXb(xa, xb, fxa, fxb);
+    const new_xb = round(getNewXb(xa, xb, fxa, fxb), roundoff);
     const new_rel = Math.abs(round(((new_xb - xb) / new_xb) * 100, 2));
 
     if (Math.abs(rel) < form.getValues("precision")) {
@@ -272,8 +272,8 @@ const Secant = ({
                             type={"number"}
                             {...field}
                             defaultValue={0.1}
-                            step={0.1}
-                            min={0.1}
+                            step={0.0001}
+                            min={0.0001}
                           />
                         </FormControl>
                         <FormMessage />

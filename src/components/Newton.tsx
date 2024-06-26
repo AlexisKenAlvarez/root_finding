@@ -164,7 +164,7 @@ const Newton = ({
     iteration?: number
   }) => {
     const next_x = round(x - fx / fx_prime, roundoff)
-
+    
     setComputation((prev) => [
       ...prev,
       {
@@ -175,12 +175,6 @@ const Newton = ({
       },
     ]);
     const new_rel = ((next_x - x) / next_x) * 100;
-
-    const condition = Math.abs(round(rel, 2)) < form.getValues("precision");
-
-    if (condition) {
-      return;
-    }
 
     setStep((prev) => [
       ...prev,
@@ -218,7 +212,22 @@ const Newton = ({
       },
     ]);
 
+    const condition = Math.abs(next_x - x) < form.getValues("precision")
 
+    if (condition) {
+
+      setComputation((prev) => [
+        ...prev,
+        {
+          x: round(next_x, roundoff),
+          fx: round(getFx(equation, next_x), roundoff),
+          fx_prime: round(toDerivative(equation, next_x), roundoff),
+          rel: `${ Math.abs(round(new_rel, 2))}%`,
+        }
+      ]);
+
+      return;
+    }
 
     Iterate({
       x: next_x,
