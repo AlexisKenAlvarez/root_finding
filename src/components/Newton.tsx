@@ -79,6 +79,7 @@ const Newton = ({
   function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setComputation([]);
+      setStep([]);
       const { xo, equation } = values;
 
       const fx = round(getFx(equation, xo), roundoff);
