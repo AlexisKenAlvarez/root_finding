@@ -32,6 +32,12 @@ interface IterationType {
   equation?: string;
 }
 
+interface StepType {
+  title: string;
+  value: string;
+  iteration: number
+}
+
 const COLUMNS = ["i", "x", "f(x)", "f'(x)", "rel"];
 
 const Newton = ({
@@ -50,6 +56,7 @@ const Newton = ({
   handleRound: (round_value: number) => void;
 }) => {
   const [computation, setComputation] = useState<IterationType[]>([]);
+  const [step, setStep] = useState<StepType[]>([]);
 
   const formSchema = z.object({
     equation: z
@@ -74,13 +81,49 @@ const Newton = ({
       setComputation([]);
       const { xo, equation } = values;
 
-      const fx = round(getFx(equation, xo), roundoff)
+      const fx = round(getFx(equation, xo), roundoff);
 
-      const fx_prime = round(toDerivative(equation, xo), roundoff)
-
+      const fx_prime = round(toDerivative(equation, xo), roundoff);
 
       const next_x = xo - fx / fx_prime;
+
+      setStep((prev) => [
+        ...prev,
+        {
+          title: "To solve for next x",
+          value: `xi+1(Next x) = x - f(x) / f'(x) = ${xo} - ${fx} / ${fx_prime} = ${next_x}`,
+          iteration: 2
+        },
+      ]);
+
       const rel = ((next_x - xo) / next_x) * 100;
+
+      setStep((prev) => [
+        ...prev, {
+          title: "For the next f(x)",
+          value: `f(x) = ${equation.replace("x", `(${round(next_x, roundoff)})`)} = ${round(getFx(equation, round(next_x, roundoff)), roundoff)}`,
+          iteration: 2
+        }
+      ])
+  
+      setStep((prev) => [
+        ...prev, {
+          title: "For the next f'(x)",
+          value: `f'(x) Just substitute x to derivative = ${round(toDerivative(equation, next_x), 4)}`,
+          iteration: 2
+        }
+      ])
+
+      setStep((prev) => [
+        ...prev,
+        {
+          title: "For the next relative error",
+          value: `Relative error = (next_x - x) / next_x * 100 \n Relative error = (${next_x} - ${xo}) / ${next_x} * 100 \n Relative error = ${Math.abs(
+            round(rel, 2)
+          )}%`,
+          iteration: 2
+        },
+      ]);
 
       setComputation((prev) => [
         ...prev,
@@ -111,14 +154,16 @@ const Newton = ({
     fx_prime,
     equation,
     rel,
+    iteration = 3
   }: {
     x: number;
     fx: number;
     fx_prime: number;
     equation: string;
     rel: number;
+    iteration?: number
   }) => {
-    const next_x = x - fx / fx_prime;
+    const next_x = round(x - fx / fx_prime, roundoff)
 
     setComputation((prev) => [
       ...prev,
@@ -131,6 +176,42 @@ const Newton = ({
     ]);
     const new_rel = ((next_x - x) / next_x) * 100;
 
+    setStep((prev) => [
+      ...prev,
+      {
+        title: "To solve for next x",
+        value: `xi+1(Next x) = x - f(x) / f'(x) = ${x} - ${fx} / ${round(fx_prime, roundoff)} = ${next_x}`,
+        iteration
+      },
+    ]);
+
+    setStep((prev) => [
+      ...prev, {
+        title: "For the next f(x)",
+        value: `f(x) = ${equation.replace("x", `(${next_x})`)} = ${round(getFx(equation, next_x), roundoff)}`,
+        iteration
+      }
+    ])
+
+    setStep((prev) => [
+      ...prev, {
+        title: "For the next f'(x)",
+        value: `f'(x) Just substitute x to derivative = ${round(toDerivative(equation, next_x), roundoff)}`,
+        iteration
+      }
+    ])
+
+    setStep((prev) => [
+      ...prev,
+      {
+        title: "For the next relative error",
+        value: `Relative error = (next_x - x) / next_x * 100 \n Relative error = (${next_x} - ${x}) / ${next_x} * 100 \n Relative error = ${Math.abs(
+          round(new_rel, 3)
+        )}%`,
+        iteration
+      },
+    ]);
+
     const condition = Math.abs(round(rel, 2)) < form.getValues("precision");
 
     if (condition) {
@@ -138,11 +219,12 @@ const Newton = ({
     }
 
     Iterate({
-      x: round(next_x, roundoff),
+      x: next_x,
       fx: round(getFx(equation, next_x), roundoff),
       fx_prime: round(toDerivative(equation, next_x), roundoff),
       equation: equation,
-      rel: Math.abs(round(new_rel, 3)),
+      rel: Math.abs(round(new_rel, 2)),
+      iteration: iteration ? (iteration + 1) : 2
     });
   };
 
@@ -218,8 +300,8 @@ const Newton = ({
                             type={"number"}
                             {...field}
                             defaultValue={0.1}
-                            step={0.1}
-                            min={0.1}
+                            step={0.01}
+                            min={0.01}
                           />
                         </FormControl>
                         <FormMessage />
@@ -276,6 +358,18 @@ const Newton = ({
               {computation[computation.length - 1]?.x}
             </h2>
           </div>
+        </div>
+      </div>
+
+      <div className=" max-w-screen-md mx-auto p-6">
+        <h1 className="text-2xl font-bold">Step by step solution below: </h1>
+        <div className="mt-2 space-y-2">
+          {step.map((item, index) => (
+            <div className="" key={index}>
+              <h1 className="font-bold">{`(${item.iteration})`}{item.title}</h1>
+              <h2 className="">{item.value}</h2>
+            </div>
+          ))}
         </div>
       </div>
     </div>
