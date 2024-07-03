@@ -163,7 +163,7 @@ const Secant = ({
     const new_xb = round(getNewXb(xa, xb, fxa, fxb), roundoff);
     const new_rel = Math.abs(round(((new_xb - xb) / new_xb) * 100, 2));
 
-    if (Math.abs(rel) < form.getValues("precision")) {
+    if (Math.abs(round(xb, roundoff) - xa) < form.getValues("precision")) {
       return;
     }
 
